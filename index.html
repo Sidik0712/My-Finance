@@ -12,23 +12,75 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
 <style>
-*{box-sizing:border-box;font-family:'Poppins',sans-serif}
-body{margin:0;background:linear-gradient(135deg,#4e73df,#1cc88a);padding:15px;color:#333}
-h1{text-align:center;color:white;margin-bottom:10px}
+*{box-sizing:border-box;font-family:'Poppins',sans-serif;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:linear-gradient(135deg,#4e73df,#1cc88a);padding:12px;color:#333}
+h1{text-align:center;color:white;margin-bottom:12px;font-size:20px}
 .container{max-width:1000px;margin:auto}
-.card{background:white;padding:15px;border-radius:15px;margin-bottom:15px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
-input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:1px solid #ddd;font-size:14px}
-button{background:#4e73df;color:white;border:none;font-weight:600;cursor:pointer}
-.nav-btn{width:auto;padding:8px 14px;margin:3px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-.progress-container{background:#eee;border-radius:30px;overflow:hidden;margin-top:8px}
-.progress-bar{height:20px;width:0%;background:linear-gradient(90deg,#1cc88a,#36b9cc);color:white;text-align:center;line-height:20px;font-size:11px}
-table td{padding:6px;border-bottom:1px solid #eee;text-align:center}
-.action-btn{padding:4px 6px;font-size:11px;border-radius:6px;margin:2px;border:none;color:white;cursor:pointer}
+.card{background:white;padding:14px;border-radius:14px;margin-bottom:14px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+
+input,select,button{
+width:100%;
+padding:14px;
+margin:6px 0;
+border-radius:10px;
+border:1px solid #ddd;
+font-size:15px
+}
+
+button{
+background:#4e73df;
+color:white;
+border:none;
+font-weight:600;
+cursor:pointer
+}
+button:active{transform:scale(.97)}
+
+.nav-btn{
+width:auto;
+padding:10px 14px;
+margin:4px;
+font-size:14px
+}
+
+.grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:14px
+}
+
+.progress-container{
+background:#eee;
+border-radius:30px;
+overflow:hidden;
+margin-top:8px
+}
+
+.progress-bar{
+height:20px;
+width:0%;
+background:linear-gradient(90deg,#1cc88a,#36b9cc);
+color:white;
+text-align:center;
+line-height:20px;
+font-size:11px
+}
+
+table{min-width:600px}
+table td{padding:8px;border-bottom:1px solid #eee;text-align:center;font-size:13px}
+
+.action-btn{padding:5px 7px;font-size:11px;border-radius:6px;margin:2px;border:none;color:white;cursor:pointer}
 .edit-btn{background:#36b9cc}
 .delete-btn{background:#e74a3b}
 .danger-btn{background:#e74a3b}
-@media(max-width:768px){.grid{grid-template-columns:1fr}}
+
+@media(max-width:768px){
+h1{font-size:18px}
+.grid{grid-template-columns:1fr}
+.nav-btn{width:100%}
+.card{padding:12px}
+table{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -94,12 +146,14 @@ table td{padding:6px;border-bottom:1px solid #eee;text-align:center}
 <div class="card">
 <h3>📋 Catatan Transaksi</h3>
 <input type="text" id="searchInput" placeholder="🔍 Cari transaksi..." onkeyup="updateTable()">
+<div style="overflow-x:auto;">
 <table id="transactionTable" style="width:100%;border-collapse:collapse;">
 <thead><tr style="background:#4e73df;color:white;">
 <th>Tanggal</th><th>Keterangan</th><th>Kategori</th><th>Tipe</th><th>Jumlah</th><th>Aksi</th>
 </tr></thead>
 <tbody></tbody>
 </table>
+</div>
 </div>
 </div>
 
@@ -121,34 +175,34 @@ localStorage.setItem("transactions",JSON.stringify(transactions));
 desc.value="";amount.value="";updateUI();
 }
 
-/* ===== TARGET TABUNGAN FIX ===== */
 function saveTarget(){
-  const input = document.getElementById("savingTarget");
-  const value = parseInt(input.value);
-
-  if(isNaN(value) || value <= 0){
-    alert("Masukkan target tabungan yang valid");
-    return;
-  }
-
-  savingTarget = value;
-  localStorage.setItem("savingTarget", savingTarget);
-  updateUI();
+const input=document.getElementById("savingTarget");
+const value=parseInt(input.value);
+if(isNaN(value)||value<=0){alert("Masukkan target tabungan yang valid");return;}
+savingTarget=value;
+localStorage.setItem("savingTarget",savingTarget);
+updateUI();
 }
 
 function deleteTransaction(i){if(confirm("Hapus transaksi?")){transactions.splice(i,1);localStorage.setItem("transactions",JSON.stringify(transactions));updateUI();}}
 function editTransaction(i){const t=transactions[i];showPage('addPage');desc.value=t.desc;amount.value=t.amount;type.value=t.type;category.value=t.category;transactions.splice(i,1);updateUI();}
 function factoryReset(){if(confirm("Hapus semua data?")){localStorage.clear();transactions=[];savingTarget=0;updateUI();}}
 
-function exportPDF(){const { jsPDF } = window.jspdf; const doc=new jsPDF();doc.text("Laporan Keuangan",14,15);
+function exportPDF(){
+const { jsPDF } = window.jspdf;
+const doc=new jsPDF();
+doc.text("Laporan Keuangan",14,15);
 doc.autoTable({startY:20,head:[["Tanggal","Keterangan","Kategori","Tipe","Jumlah"]],
 body:transactions.map(t=>[new Date(t.date).toLocaleDateString("id-ID"),t.desc,t.category,t.type==="income"?"Pemasukan":"Pengeluaran",formatRupiah(t.amount)])});
-doc.save("Laporan_Keuangan.pdf");}
+doc.save("Laporan_Keuangan.pdf");
+}
 
 function exportExcel(){
 const data=transactions.map(t=>({Tanggal:new Date(t.date).toLocaleDateString("id-ID"),Keterangan:t.desc,Kategori:t.category,Tipe:t.type,Jumlah:t.amount}));
-const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb,ws,"Laporan");XLSX.writeFile(wb,"Laporan_Keuangan.xlsx");
+const ws=XLSX.utils.json_to_sheet(data);
+const wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"Laporan");
+XLSX.writeFile(wb,"Laporan_Keuangan.xlsx");
 }
 
 function updateChart(expenseData){if(chart)chart.destroy();chart=new Chart(expenseChart,{type:'doughnut',data:{labels:Object.keys(expenseData),datasets:[{data:Object.values(expenseData)}]}});}
@@ -164,13 +218,11 @@ tbody.innerHTML+=`<tr><td>${t.date.slice(0,10)}</td><td>${t.desc}</td><td>${t.ca
 }
 
 function updateUI(){
-document.getElementById("savingTarget").value = savingTarget || "";
-
+document.getElementById("savingTarget").value=savingTarget||"";
 let income=0,expense=0,saved=0;
 let expenseData={"Kebutuhan":0,"Tabungan":0,"Keinginan":0,"Pengembangan Diri":0};
 
 transactions.forEach(t=>{if(t.type==="income")income+=t.amount;else{expense+=t.amount;expenseData[t.category]+=t.amount;if(t.category==="Tabungan")saved+=t.amount;}});
-
 totalIncome.textContent=formatRupiah(income);
 totalExpense.textContent=formatRupiah(expense);
 balance.textContent=formatRupiah(income-expense);

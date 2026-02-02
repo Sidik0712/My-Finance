@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Keuangan Pribadi</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;font-family:'Poppins',sans-serif}
+body{margin:0;background:linear-gradient(135deg,#4e73df,#1cc88a);padding:15px;color:#333}
+h1{text-align:center;color:white;margin-bottom:10px}
+.container{max-width:1000px;margin:auto}
+.card{background:white;padding:15px;border-radius:15px;margin-bottom:15px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:1px solid #ddd;font-size:14px}
+button{background:#4e73df;color:white;border:none;font-weight:600;cursor:pointer}
+.nav-btn{width:auto;padding:8px 14px;margin:3px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.progress-container{background:#eee;border-radius:30px;overflow:hidden;margin-top:8px}
+.progress-bar{height:20px;width:0%;background:linear-gradient(90deg,#1cc88a,#36b9cc);color:white;text-align:center;line-height:20px;font-size:11px}
+table td{padding:6px;border-bottom:1px solid #eee;text-align:center}
+.action-btn{padding:4px 6px;font-size:11px;border-radius:6px;margin:2px;border:none;color:white;cursor:pointer}
+.edit-btn{background:#36b9cc}
+.delete-btn{background:#e74a3b}
+.danger-btn{background:#e74a3b}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1>💰 Keuangan Pribadi</h1>
+
+<div class="container">
+
+<div class="card" style="text-align:center">
+<button class="nav-btn" onclick="showPage('dashboardPage')">🏠 Dashboard</button>
+<button class="nav-btn" onclick="showPage('addPage')">➕ Tambah Transaksi</button>
+<button class="nav-btn" onclick="showPage('transactionPage')">📋 Catatan Transaksi</button>
+</div>
+
+<div class="card">
+<button onclick="exportPDF()">Export PDF</button>
+<button onclick="exportExcel()">Export Excel</button>
+<button onclick="factoryReset()" class="danger-btn">Hapus Semua Data</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboardPage">
+<div class="grid">
+<div class="card">
+<h3>Ringkasan</h3>
+<p>Total Pemasukan: <strong id="totalIncome">Rp0</strong></p>
+<p>Total Pengeluaran: <strong id="totalExpense">Rp0</strong></p>
+<p>Sisa Uang: <strong id="balance">Rp0</strong></p>
+</div>
+
+<div class="card">
+<h3>🎯 Target Tabungan</h3>
+<input type="number" id="savingTarget" placeholder="Target tabungan">
+<button onclick="saveTarget()">Simpan Target</button>
+<p>Target: <strong id="targetDisplay">Rp0</strong></p>
+<p>Terkumpul: <strong id="savedAmount">Rp0</strong></p>
+<div class="progress-container"><div class="progress-bar" id="progressBar">0%</div></div>
+</div>
+</div>
+
+<div class="card"><h3>Grafik Pengeluaran</h3><canvas id="expenseChart"></canvas></div>
+</div>
+
+<!-- TAMBAH -->
+<div id="addPage" style="display:none;">
+<div class="card">
+<h3>Tambah Transaksi</h3>
+<input type="text" id="desc" placeholder="Keterangan">
+<input type="number" id="amount" placeholder="Jumlah uang">
+<select id="type"><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select>
+<select id="category">
+<option value="Kebutuhan">Kebutuhan</option>
+<option value="Tabungan">Tabungan</option>
+<option value="Keinginan">Keinginan</option>
+<option value="Pengembangan Diri">Pengembangan Diri</option>
+</select>
+<button onclick="addTransaction()">Simpan Transaksi</button>
+</div>
+</div>
+
+<!-- TRANSAKSI -->
+<div id="transactionPage" style="display:none;">
+<div class="card">
+<h3>📋 Catatan Transaksi</h3>
+<input type="text" id="searchInput" placeholder="🔍 Cari transaksi..." onkeyup="updateTable()">
+<table id="transactionTable" style="width:100%;border-collapse:collapse;">
+<thead><tr style="background:#4e73df;color:white;">
+<th>Tanggal</th><th>Keterangan</th><th>Kategori</th><th>Tipe</th><th>Jumlah</th><th>Aksi</th>
+</tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+<script>
+let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+let savingTarget = parseInt(localStorage.getItem("savingTarget")) || 0;
+let chart;
+
+function showPage(p){dashboardPage.style.display="none";addPage.style.display="none";transactionPage.style.display="none";document.getElementById(p).style.display="block";}
+function formatRupiah(n){return "Rp"+n.toLocaleString("id-ID")}
+
+function addTransaction(){
+const d=desc.value,a=parseInt(amount.value),t=type.value,c=category.value,date=new Date().toISOString();
+if(!d||!a)return alert("Isi semua data dulu!");
+transactions.push({desc:d,amount:a,type:t,category:c,date});
+localStorage.setItem("transactions",JSON.stringify(transactions));
+desc.value="";amount.value="";updateUI();
+}
+
+/* ===== TARGET TABUNGAN FIX ===== */
+function saveTarget(){
+  const input = document.getElementById("savingTarget");
+  const value = parseInt(input.value);
+
+  if(isNaN(value) || value <= 0){
+    alert("Masukkan target tabungan yang valid");
+    return;
+  }
+
+  savingTarget = value;
+  localStorage.setItem("savingTarget", savingTarget);
+  updateUI();
+}
+
+function deleteTransaction(i){if(confirm("Hapus transaksi?")){transactions.splice(i,1);localStorage.setItem("transactions",JSON.stringify(transactions));updateUI();}}
+function editTransaction(i){const t=transactions[i];showPage('addPage');desc.value=t.desc;amount.value=t.amount;type.value=t.type;category.value=t.category;transactions.splice(i,1);updateUI();}
+function factoryReset(){if(confirm("Hapus semua data?")){localStorage.clear();transactions=[];savingTarget=0;updateUI();}}
+
+function exportPDF(){const { jsPDF } = window.jspdf; const doc=new jsPDF();doc.text("Laporan Keuangan",14,15);
+doc.autoTable({startY:20,head:[["Tanggal","Keterangan","Kategori","Tipe","Jumlah"]],
+body:transactions.map(t=>[new Date(t.date).toLocaleDateString("id-ID"),t.desc,t.category,t.type==="income"?"Pemasukan":"Pengeluaran",formatRupiah(t.amount)])});
+doc.save("Laporan_Keuangan.pdf");}
+
+function exportExcel(){
+const data=transactions.map(t=>({Tanggal:new Date(t.date).toLocaleDateString("id-ID"),Keterangan:t.desc,Kategori:t.category,Tipe:t.type,Jumlah:t.amount}));
+const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"Laporan");XLSX.writeFile(wb,"Laporan_Keuangan.xlsx");
+}
+
+function updateChart(expenseData){if(chart)chart.destroy();chart=new Chart(expenseChart,{type:'doughnut',data:{labels:Object.keys(expenseData),datasets:[{data:Object.values(expenseData)}]}});}
+
+function updateTable(){
+const tbody=document.querySelector("#transactionTable tbody");
+const k=searchInput.value.toLowerCase();tbody.innerHTML="";
+transactions.filter(t=>t.desc.toLowerCase().includes(k)).reverse().forEach((t,i)=>{
+tbody.innerHTML+=`<tr><td>${t.date.slice(0,10)}</td><td>${t.desc}</td><td>${t.category}</td><td>${t.type}</td><td>${formatRupiah(t.amount)}</td>
+<td><button class="action-btn edit-btn" onclick="editTransaction(${i})">Edit</button>
+<button class="action-btn delete-btn" onclick="deleteTransaction(${i})">Hapus</button></td></tr>`;
+});
+}
+
+function updateUI(){
+document.getElementById("savingTarget").value = savingTarget || "";
+
+let income=0,expense=0,saved=0;
+let expenseData={"Kebutuhan":0,"Tabungan":0,"Keinginan":0,"Pengembangan Diri":0};
+
+transactions.forEach(t=>{if(t.type==="income")income+=t.amount;else{expense+=t.amount;expenseData[t.category]+=t.amount;if(t.category==="Tabungan")saved+=t.amount;}});
+
+totalIncome.textContent=formatRupiah(income);
+totalExpense.textContent=formatRupiah(expense);
+balance.textContent=formatRupiah(income-expense);
+targetDisplay.textContent=formatRupiah(savingTarget);
+savedAmount.textContent=formatRupiah(saved);
+
+let percent=savingTarget?Math.min((saved/savingTarget)*100,100):0;
+progressBar.style.width=percent+"%";
+progressBar.textContent=Math.floor(percent)+"%";
+
+updateChart(expenseData);
+updateTable();
+}
+
+updateUI();
+</script>
+</body>
+</html>
